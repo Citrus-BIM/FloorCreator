@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
 <FloorCreatorSettings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <FloorCreationOptionSelectedName>rbt_CreateFromParameter</FloorCreationOptionSelectedName>
+  <FloorCreationOptionSelectedName>rbt_ManualCreation</FloorCreationOptionSelectedName>
   <InRoomsSelectedName>rbt_InSelected</InRoomsSelectedName>
   <FloorTypeName>АР_Тип1_Пол кермогранит_150</FloorTypeName>
-  <FloorLevelOffset>100</FloorLevelOffset>
+  <FloorLevelOffset>0</FloorLevelOffset>
+  <FillDoorPatches>true</FillDoorPatches>
 </FloorCreatorSettings>
