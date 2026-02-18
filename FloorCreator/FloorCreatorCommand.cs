@@ -30,16 +30,40 @@ namespace FloorCreator
             Document doc = commandData.Application.ActiveUIDocument.Document;
             Selection sel = commandData.Application.ActiveUIDocument.Selection;
 
-            //Типы полов для формы
-            List<FloorType> floorTypesList = new FilteredElementCollector(doc)
+            // Типы полов для формы
+            List<FloorType> floorTypesList;
+
+#if R2019 || R2020 || R2021 || R2022 || R2023 || R2024 || R2025
+
+            floorTypesList = new FilteredElementCollector(doc)
                 .OfClass(typeof(FloorType))
-                .Where(f => f.Category.Id.IntegerValue.Equals((int)BuiltInCategory.OST_Floors))
-                .Where(f => f.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL) != null)
-                .Where(f => f.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL).AsString() == "Пол"
-                || f.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL).AsString() == "Полы")
                 .Cast<FloorType>()
+                .Where(ft => ft.Category != null && ft.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Floors)
+                .Where(ft =>
+                {
+                    var p = ft.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL);
+                    var s = p != null ? p.AsString() : null;
+                    return s == "Пол" || s == "Полы";
+                })
+                .OrderBy(ft => ft.Name, new AlphanumComparatorFastString())
+                .ToList();
+#else
+
+            floorTypesList = new FilteredElementCollector(doc)
+                .OfClass(typeof(FloorType))
+                .WhereElementIsElementType()
+                .OfCategory(BuiltInCategory.OST_Floors)
+                .Cast<FloorType>()
+                .Where(f =>
+                {
+                    var p = f.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL);
+                    var s = p != null ? p.AsString() : null;
+                    return s == "Пол" || s == "Полы";
+                })
                 .OrderBy(f => f.Name, new AlphanumComparatorFastString())
                 .ToList();
+
+#endif
 
             if (floorTypesList.Count == 0)
             {
@@ -322,16 +346,47 @@ namespace FloorCreator
                                 }
                             }
 
-                            //Удаление старого пола
+#if R2019 || R2020 || R2021 || R2022 || R2023 || R2024 || R2025
+
                             List<Floor> floorList = new FilteredElementCollector(doc)
                                 .OfClass(typeof(Floor))
-                                .Where(f => f.LevelId == room.LevelId)
                                 .Cast<Floor>()
-                                .Where(f => f.Category.Id.IntegerValue.Equals((int)BuiltInCategory.OST_Floors))
-                                .Where(f => f.FloorType.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL).AsString() == "Пол"
-                                || f.FloorType.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL).AsString() == "Полы")
+                                .Where(f => f.LevelId == room.LevelId)
+                                .Where(f => f.Category != null && f.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Floors)
+                                .Where(f =>
+                                {
+                                    var ft = f.FloorType;
+                                    if (ft == null) return false;
+
+                                    var p = ft.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL);
+                                    var s = p != null ? p.AsString() : null;
+
+                                    return s == "Пол" || s == "Полы";
+                                })
                                 .OrderBy(f => f.Name)
                                 .ToList();
+
+#else
+
+                            List<Floor> floorList = new FilteredElementCollector(doc)
+                                .OfClass(typeof(Floor))
+                                .OfCategory(BuiltInCategory.OST_Floors)
+                                .Cast<Floor>()
+                                .Where(f => f.LevelId == room.LevelId)
+                                .Where(f =>
+                                {
+                                    var ft = f.FloorType;
+                                    if (ft == null) return false;
+
+                                    var p = ft.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL);
+                                    var s = p != null ? p.AsString() : null;
+
+                                    return s == "Пол" || s == "Полы";
+                                })
+                                .OrderBy(f => f.Name)
+                                .ToList();
+
+#endif
 
                             t.Start("Удаление старого пола");
                             //Солид помещения
@@ -409,7 +464,6 @@ namespace FloorCreator
                             FailureHandlingOptions failureHandlingOptions = t.GetFailureHandlingOptions();
                             failureHandlingOptions.SetFailuresPreprocessor(new FloorIntersectionWarningSwallower());
                             t.SetFailureHandlingOptions(failureHandlingOptions);
-                            //СОБРАТЬ ПРЕДУПРЕЖДЕНИЯ ПО ПОМЕЩЕНИЯМ!!!!
 
                             t.Commit();
                             t.Start("Вырезание проемов");
@@ -503,16 +557,48 @@ namespace FloorCreator
                                     }
                                 }
 
-                                //Удаление старого пола
+                                // Удаление старого пола
+#if R2019 || R2020 || R2021 || R2022 || R2023 || R2024 || R2025
+
+                            List<Floor> floorList = new FilteredElementCollector(doc)
+                                .OfClass(typeof(Floor))
+                                .Cast<Floor>()
+                                .Where(f => f.LevelId == room.LevelId)
+                                .Where(f => f.Category != null && f.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Floors)
+                                .Where(f =>
+                                {
+                                    var ft = f.FloorType;
+                                    if (ft == null) return false;
+
+                                    var p = ft.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL);
+                                    var s = p != null ? p.AsString() : null;
+
+                                    return s == "Пол" || s == "Полы";
+                                })
+                                .OrderBy(f => f.Name)
+                                .ToList();
+
+#else
+
                                 List<Floor> floorList = new FilteredElementCollector(doc)
                                     .OfClass(typeof(Floor))
-                                    .Where(f => f.LevelId == room.LevelId)
+                                    .OfCategory(BuiltInCategory.OST_Floors)
                                     .Cast<Floor>()
-                                    .Where(f => f.Category.Id.IntegerValue.Equals((int)BuiltInCategory.OST_Floors))
-                                    .Where(f => f.FloorType.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL).AsString() == "Пол"
-                                    || f.FloorType.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL).AsString() == "Полы")
+                                    .Where(f => f.LevelId == room.LevelId)
+                                    .Where(f =>
+                                    {
+                                        var ft = f.FloorType;
+                                        if (ft == null) return false;
+
+                                        var p = ft.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL);
+                                        var s = p != null ? p.AsString() : null;
+
+                                        return s == "Пол" || s == "Полы";
+                                    })
                                     .OrderBy(f => f.Name)
                                     .ToList();
+
+#endif
 
                                 FloorType typeFromParameter = floorTypesList
                                     .FirstOrDefault(ft => !string.IsNullOrEmpty(ft.get_Parameter(BuiltInParameter.WINDOW_TYPE_ID).AsString()) &&
@@ -679,15 +765,48 @@ namespace FloorCreator
                                 }
 
                                 //Удаление старого пола
+#if R2019 || R2020 || R2021 || R2022 || R2023 || R2024 || R2025
+
+                            List<Floor> floorList = new FilteredElementCollector(doc)
+                                .OfClass(typeof(Floor))
+                                .Cast<Floor>()
+                                .Where(f => f.LevelId == room.LevelId)
+                                .Where(f => f.Category != null && f.Category.Id.IntegerValue == (int)BuiltInCategory.OST_Floors)
+                                .Where(f =>
+                                {
+                                    var ft = f.FloorType;
+                                    if (ft == null) return false;
+
+                                    var p = ft.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL);
+                                    var s = p != null ? p.AsString() : null;
+
+                                    return s == "Пол" || s == "Полы";
+                                })
+                                .OrderBy(f => f.Name)
+                                .ToList();
+
+#else
+
                                 List<Floor> floorList = new FilteredElementCollector(doc)
-                                    .OfClass(typeof(Floor))
-                                    .Where(f => f.LevelId == room.LevelId)
+                                    .OfCategory(BuiltInCategory.OST_Floors)
+                                    .WhereElementIsNotElementType()
                                     .Cast<Floor>()
-                                    .Where(f => f.Category.Id.IntegerValue.Equals((int)BuiltInCategory.OST_Floors))
-                                    .Where(f => f.FloorType.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL).AsString() == "Пол"
-                                    || f.FloorType.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL).AsString() == "Полы")
+                                    .Where(f => f.LevelId == room.LevelId)
+                                    .Where(f =>
+                                    {
+                                        var ft = f.FloorType;
+                                        if (ft == null) return false;
+
+                                        var p = ft.get_Parameter(BuiltInParameter.ALL_MODEL_MODEL);
+                                        var s = p != null ? p.AsString() : null;
+
+                                        return s == "Пол" || s == "Полы";
+                                    })
                                     .OrderBy(f => f.Name)
                                     .ToList();
+
+#endif
+
                                 FloorType typeFromParameter = floorTypesList
                                     .FirstOrDefault(ft => !string.IsNullOrEmpty(ft.get_Parameter(BuiltInParameter.WINDOW_TYPE_ID).AsString()) &&
                                     ft.get_Parameter(BuiltInParameter.WINDOW_TYPE_ID).AsString() == room.get_Parameter(BuiltInParameter.ROOM_FINISH_FLOOR).AsString());
@@ -807,19 +926,37 @@ namespace FloorCreator
         }
         private static List<Room> GetRoomsFromCurrentSelection(Document doc, Selection sel)
         {
+            var result = new List<Room>();
+            if (doc == null || sel == null) return result;
+
             ICollection<ElementId> selectedIds = sel.GetElementIds();
-            List<Room> tempRoomsList = new List<Room>();
-            foreach (ElementId roomId in selectedIds)
+            if (selectedIds == null || selectedIds.Count == 0) return result;
+
+            foreach (ElementId id in selectedIds)
             {
-                if (doc.GetElement(roomId) is Room
-                    && null != doc.GetElement(roomId).Category
-                    && doc.GetElement(roomId).Category.Id.IntegerValue.Equals((int)BuiltInCategory.OST_Rooms))
-                {
-                    tempRoomsList.Add(doc.GetElement(roomId) as Room);
-                }
+                if (id == null || id == ElementId.InvalidElementId) continue;
+
+                Element e = doc.GetElement(id);
+                if (e == null) continue;
+
+                // Быстро: сначала тип
+                Room room = e as Room;
+                if (room == null) continue;
+
+#if R2019 || R2020 || R2021 || R2022 || R2023 || R2024 || R2025
+                Category cat = e.Category;
+                if (cat != null && cat.Id.IntegerValue == (int)BuiltInCategory.OST_Rooms)
+                    result.Add(room);
+#else
+                Category cat = e.Category;
+                if (cat != null && cat.Id.Value == (long)BuiltInCategory.OST_Rooms)
+                    result.Add(room);
+#endif
             }
-            return tempRoomsList;
+
+            return result;
         }
+
         private void ThreadStartingPoint()
         {
             floorCreatorProgressBarWPF = new FloorCreatorProgressBarWPF();

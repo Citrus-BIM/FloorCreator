@@ -1,11 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36301.6 d17.14
+VisualStudioVersion = 17.14.36301.6
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FloorCreator", "FloorCreator\FloorCreator.csproj", "{566C56CD-D3A0-43C6-BB37-A95DBAFCBE0A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FloorCreator25", "FloorCreator25\FloorCreator25.csproj", "{12272402-E189-49B6-BB35-8C86CEB9E953}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{754FC069-D67B-A9D7-50A1-8D1CA196D8F1}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +18,8 @@ Global
 		R2022|Any CPU = R2022|Any CPU
 		R2023|Any CPU = R2023|Any CPU
 		R2024|Any CPU = R2024|Any CPU
+		R2025|Any CPU = R2025|Any CPU
+		R2026|Any CPU = R2026|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{566C56CD-D3A0-43C6-BB37-A95DBAFCBE0A}.R2019|Any CPU.ActiveCfg = R2019|Any CPU
@@ -29,18 +34,10 @@ Global
 		{566C56CD-D3A0-43C6-BB37-A95DBAFCBE0A}.R2023|Any CPU.Build.0 = R2023|Any CPU
 		{566C56CD-D3A0-43C6-BB37-A95DBAFCBE0A}.R2024|Any CPU.ActiveCfg = R2024|Any CPU
 		{566C56CD-D3A0-43C6-BB37-A95DBAFCBE0A}.R2024|Any CPU.Build.0 = R2024|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2019|Any CPU.ActiveCfg = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2019|Any CPU.Build.0 = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2020|Any CPU.ActiveCfg = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2020|Any CPU.Build.0 = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2021|Any CPU.ActiveCfg = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2021|Any CPU.Build.0 = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2022|Any CPU.ActiveCfg = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2022|Any CPU.Build.0 = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2023|Any CPU.ActiveCfg = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2023|Any CPU.Build.0 = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2024|Any CPU.ActiveCfg = Debug|Any CPU
-		{12272402-E189-49B6-BB35-8C86CEB9E953}.R2024|Any CPU.Build.0 = Debug|Any CPU
+		{566C56CD-D3A0-43C6-BB37-A95DBAFCBE0A}.R2025|Any CPU.ActiveCfg = R2025|Any CPU
+		{566C56CD-D3A0-43C6-BB37-A95DBAFCBE0A}.R2025|Any CPU.Build.0 = R2025|Any CPU
+		{566C56CD-D3A0-43C6-BB37-A95DBAFCBE0A}.R2026|Any CPU.ActiveCfg = R2026|Any CPU
+		{566C56CD-D3A0-43C6-BB37-A95DBAFCBE0A}.R2026|Any CPU.Build.0 = R2026|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

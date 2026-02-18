@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>SchemesBySystems</AssemblyName>
+	<RootNamespace>SchemesBySystems</RootNamespace>
+  </PropertyGroup>
+	<ItemGroup>
+		<Resource Include="Resources\citrus.ico" />
+	</ItemGroup>
+</Project>
