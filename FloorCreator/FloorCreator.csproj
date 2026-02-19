@@ -1,9 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>SchemesBySystems</AssemblyName>
-	<RootNamespace>SchemesBySystems</RootNamespace>
+    <AssemblyName>FloorCreator</AssemblyName>
+	<RootNamespace>FloorCreator</RootNamespace>
+	<BaseOutputPath></BaseOutputPath>
   </PropertyGroup>
 	<ItemGroup>
 		<Resource Include="Resources\citrus.ico" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="CitrusTheme\" />
 	</ItemGroup>
 </Project>

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Grid = System.Windows.Controls.Grid;
 
 namespace FloorCreator
 {
@@ -21,74 +22,79 @@ namespace FloorCreator
         public FloorCreatorWPF(List<FloorType> floorTypesList)
         {
             FloorCreatorSettingsItem = FloorCreatorSettings.GetSettings();
+
             InitializeComponent();
+
             comboBox_FloorType.ItemsSource = floorTypesList;
             comboBox_FloorType.DisplayMemberPath = "Name";
 
+            // Базовые дефолты на случай пустых/битых настроек
+            rbt_ManualCreation.IsChecked = true;
+            rbt_InSelected.IsChecked = true;
+
+            if (comboBox_FloorType.Items.Count > 0)
+                comboBox_FloorType.SelectedItem = comboBox_FloorType.Items[0];
+
+            textBox_FloorLevelOffset.Text = "0";
+            chk_FillDoorPatches.IsChecked = false;
+
             if (FloorCreatorSettingsItem != null)
             {
-                if (FloorCreatorSettingsItem.FloorCreationOptionSelectedName == "rbt_ManualCreation")
-                {
-                    rbt_ManualCreation.IsChecked = true;
-                }
-                else
-                {
+                // Опция создания
+                if (FloorCreatorSettingsItem.FloorCreationOptionSelectedName == "rbt_CreateFromParameter")
                     rbt_CreateFromParameter.IsChecked = true;
-                }
-                groupBox_FloorCreationOption_Checked(null, null);
-
-                if (FloorCreatorSettingsItem.InRoomsSelectedName == "rbt_InSelected")
-                {
-                    rbt_InSelected.IsChecked = true;
-                }
                 else
-                {
+                    rbt_ManualCreation.IsChecked = true;
+
+                // В помещениях
+                if (FloorCreatorSettingsItem.InRoomsSelectedName == "rbt_InWholeProject")
                     rbt_InWholeProject.IsChecked = true;
-                }
-
-                if (floorTypesList.FirstOrDefault(ct => ct.Name == FloorCreatorSettingsItem.FloorTypeName) != null)
-                {
-                    comboBox_FloorType.SelectedItem = floorTypesList.FirstOrDefault(ct => ct.Name == FloorCreatorSettingsItem.FloorTypeName);
-                }
                 else
-                {
-                    comboBox_FloorType.SelectedItem = comboBox_FloorType.Items[0];
-                }
+                    rbt_InSelected.IsChecked = true;
 
-                textBox_FloorLevelOffset.Text = FloorCreatorSettingsItem.FloorLevelOffset;
+                // Тип пола
+                var savedFloorType = floorTypesList.FirstOrDefault(ct => ct.Name == FloorCreatorSettingsItem.FloorTypeName);
+                if (savedFloorType != null)
+                    comboBox_FloorType.SelectedItem = savedFloorType;
+
+                // Смещение от уровня — если пусто, ставим "0"
+                if (!string.IsNullOrWhiteSpace(FloorCreatorSettingsItem.FloorLevelOffset))
+                    textBox_FloorLevelOffset.Text = FloorCreatorSettingsItem.FloorLevelOffset;
+                else
+                    textBox_FloorLevelOffset.Text = "0";
 
                 chk_FillDoorPatches.IsChecked = FloorCreatorSettingsItem.FillDoorPatches;
             }
-            else
-            {
-                rbt_ManualCreation.IsChecked = true;
-                rbt_InSelected.IsChecked = true;
-                comboBox_FloorType.SelectedItem = comboBox_FloorType.Items[0];
-                groupBox_FloorCreationOption_Checked(null, null);
 
-                chk_FillDoorPatches.IsChecked = false;
-            }
+            // Обновляем доступность контролов после выставления радио
+            groupBox_FloorCreationOption_Checked(null, null);
         }
 
         //Изменение опции создания полов
         private void groupBox_FloorCreationOption_Checked(object sender, RoutedEventArgs e)
         {
-            if (rbt_CreateFromParameter != null)
+            if (groupBox_FloorCreationOption == null)
+                return;
+
+            var host = groupBox_FloorCreationOption.Content as StackPanel;
+            if (host == null)
+                return;
+
+            var checkedRb = host.Children
+                .OfType<RadioButton>()
+                .FirstOrDefault(rb => rb.IsChecked == true);
+
+            string actionSelectionButtonName = checkedRb != null ? checkedRb.Name : "rbt_ManualCreation";
+
+            if (actionSelectionButtonName == "rbt_ManualCreation")
             {
-                string actionSelectionButtonName = (groupBox_FloorCreationOption.Content as StackPanel)
-                    .Children.OfType<RadioButton>()
-                    .FirstOrDefault(rb => rb.IsChecked.Value == true)
-                    .Name;
-                if (actionSelectionButtonName == "rbt_ManualCreation")
-                {
-                    groupBox_InRooms.IsEnabled = false;
-                    comboBox_FloorType.IsEnabled = true;
-                }
-                else if (actionSelectionButtonName == "rbt_CreateFromParameter")
-                {
-                    groupBox_InRooms.IsEnabled = true;
-                    comboBox_FloorType.IsEnabled = false;
-                }
+                if (groupBox_InRooms != null) groupBox_InRooms.IsEnabled = false;
+                if (comboBox_FloorType != null) comboBox_FloorType.IsEnabled = true;
+            }
+            else if (actionSelectionButtonName == "rbt_CreateFromParameter")
+            {
+                if (groupBox_InRooms != null) groupBox_InRooms.IsEnabled = true;
+                if (comboBox_FloorType != null) comboBox_FloorType.IsEnabled = false;
             }
         }
 
@@ -123,26 +129,66 @@ namespace FloorCreator
         private void SaveSettings()
         {
             FloorCreatorSettingsItem = new FloorCreatorSettings();
-            FloorCreationOptionSelectedName = (groupBox_FloorCreationOption.Content as StackPanel)
-                .Children.OfType<RadioButton>()
-                .FirstOrDefault(rb => rb.IsChecked.Value == true)
-                .Name;
+
+            // Опция создания пола (верхняя группа)
+            FloorCreationOptionSelectedName = GetCheckedRadioButtonName(groupBox_FloorCreationOption, "rbt_ManualCreation");
             FloorCreatorSettingsItem.FloorCreationOptionSelectedName = FloorCreationOptionSelectedName;
 
-            InRoomsSelectedName = (groupBox_InRooms.Content as System.Windows.Controls.Grid)
-                .Children.OfType<RadioButton>()
-                .FirstOrDefault(rb => rb.IsChecked.Value == true)
-                .Name;
+            // В помещениях (теперь внутри GroupBox лежит StackPanel, а не Grid)
+            InRoomsSelectedName = GetCheckedRadioButtonName(groupBox_InRooms, "rbt_InSelected");
             FloorCreatorSettingsItem.InRoomsSelectedName = InRoomsSelectedName;
 
-            SelectedFloorType = comboBox_FloorType.SelectedItem as FloorType;
-            FloorCreatorSettingsItem.FloorTypeName = SelectedFloorType.Name;
+            // Тип пола
+            SelectedFloorType = comboBox_FloorType != null ? comboBox_FloorType.SelectedItem as FloorType : null;
+            FloorCreatorSettingsItem.FloorTypeName = SelectedFloorType != null ? SelectedFloorType.Name : null;
 
-            double.TryParse(textBox_FloorLevelOffset.Text, out FloorLevelOffset);
-            FloorCreatorSettingsItem.FloorLevelOffset = textBox_FloorLevelOffset.Text;
+            // Смещение от уровня — если пусто/мусор, считаем 0 и сохраняем "0"
+            string offsetText = textBox_FloorLevelOffset != null ? textBox_FloorLevelOffset.Text : null;
+            if (string.IsNullOrWhiteSpace(offsetText))
+                offsetText = "0";
 
-            FloorCreatorSettingsItem.FillDoorPatches = chk_FillDoorPatches.IsChecked == true;
+            if (!double.TryParse(offsetText, out FloorLevelOffset))
+                FloorLevelOffset = 0;
+
+            // нормализуем textbox, чтобы пользователь видел корректное значение
+            if (textBox_FloorLevelOffset != null && string.IsNullOrWhiteSpace(textBox_FloorLevelOffset.Text))
+                textBox_FloorLevelOffset.Text = "0";
+
+            FloorCreatorSettingsItem.FloorLevelOffset = offsetText;
+
+            // Чекбокс
+            FloorCreatorSettingsItem.FillDoorPatches = chk_FillDoorPatches != null && chk_FillDoorPatches.IsChecked == true;
+
             FloorCreatorSettingsItem.SaveSettings();
+        }
+        private static string GetCheckedRadioButtonName(GroupBox groupBox, string fallbackName)
+        {
+            if (groupBox == null || groupBox.Content == null)
+                return fallbackName;
+
+            // Вариант 1: StackPanel
+            var stack = groupBox.Content as StackPanel;
+            if (stack != null)
+            {
+                var rb = stack.Children
+                    .OfType<RadioButton>()
+                    .FirstOrDefault(x => x.IsChecked == true);
+
+                return rb != null ? rb.Name : fallbackName;
+            }
+
+            // Вариант 2: Grid (старый вариант разметки)
+            var grid = groupBox.Content as Grid;
+            if (grid != null)
+            {
+                var rb = grid.Children
+                    .OfType<RadioButton>()
+                    .FirstOrDefault(x => x.IsChecked == true);
+
+                return rb != null ? rb.Name : fallbackName;
+            }
+
+            return fallbackName;
         }
     }
 }
