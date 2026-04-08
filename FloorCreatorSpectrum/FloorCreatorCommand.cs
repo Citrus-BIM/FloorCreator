@@ -15,7 +15,7 @@ using System.Windows;
 namespace FloorCreator
 {
     [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
-    class FloorCreatorCommand : IExternalCommand
+    public class FloorCreatorCommand : IExternalCommand
     {
         FloorCreatorProgressBarWPF floorCreatorProgressBarWPF;
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)

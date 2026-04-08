@@ -60,8 +60,9 @@
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
-        <UseWPF>true</UseWPF>
-    </PropertyGroup>
+		<UseWPF>true</UseWPF>
+		<UseWindowsForms>true</UseWindowsForms>
+	</PropertyGroup>
 
     <ItemGroup>
         <PackageReference
