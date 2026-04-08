@@ -151,162 +151,12 @@ namespace FloorCreator
 
                             if (needFillDoorPatches)
                             {
-                                var doorPatches = new List<(XYZ p1, XYZ p2, XYZ p3, XYZ p4)>();
-
-                                var doorCollector = new FilteredElementCollector(doc)
-                                    .OfCategory(BuiltInCategory.OST_Doors)
-                                    .OfClass(typeof(FamilyInstance))
-                                    .Cast<FamilyInstance>()
-                                    .Where(d =>
-                                        (d.FromRoom != null && d.FromRoom.Id == room.Id) ||
-                                        (d.ToRoom != null && d.ToRoom.Id == room.Id))
-                                    .ToList();
-
-                                // ---------------- 1) Формируем точки patch ----------------
-                                foreach (var door in doorCollector)
+                                firstRoomCurves = ApplyDoorPatchesToRoomCurves(doc, room, loops, firstRoomCurves, shortCurveTolerance, curveCreationTolerance);
+                                if (firstRoomCurves.Size < 3)
                                 {
-                                    var hostWall = door.Host as Wall;
-                                    if (hostWall == null) continue;
-
-                                    // ширина проёма
-                                    double w = door.Symbol?.get_Parameter(BuiltInParameter.GENERIC_WIDTH)?.AsDouble() ?? 0;
-                                    if (w == 0)
-                                        w = door.get_Parameter(BuiltInParameter.GENERIC_WIDTH)?.AsDouble() ?? 0;
-                                    if (w <= 0) continue;
-
-                                    double halfW = w / 2.0;
-
-                                    var lp = door.Location as LocationPoint;
-                                    if (lp == null) continue;
-
-                                    XYZ origin = lp.Point;
-
-                                    // ближайший сегмент границы помещения (Line | Arc)
-                                    BoundarySegment bestSeg = null; double minDist = double.MaxValue;
-                                    foreach (var loop in loops)
-                                    {
-                                        foreach (var seg in loop)
-                                        {
-                                            double d = seg.GetCurve().Distance(origin);
-                                            if (d < minDist) { minDist = d; bestSeg = seg; }
-                                        }
-                                    }
-                                    if (bestSeg == null || minDist > 2.0) continue;
-
-                                    var segCrv = bestSeg.GetCurve();
-
-                                    XYZ p1, p2, p3, p4;
-
-                                    if (segCrv is Line lnSeg) // ── прямой сегмент ──
-                                    {
-                                        XYZ a = lnSeg.GetEndPoint(0);
-                                        XYZ b = lnSeg.GetEndPoint(1);
-                                        XYZ wallDir = (b - a).Normalize();
-
-                                        // проекция центра двери на линию сегмента
-                                        XYZ doorProj = ProjectPointOnLine(a, b, origin);
-
-                                        // точки вдоль сегмента по ширине проёма
-                                        p1 = doorProj - wallDir * halfW;
-                                        p2 = doorProj + wallDir * halfW;
-
-                                        // перпендикуляр внутрь помещения
-                                        XYZ roomPt = (room.Location as LocationPoint)?.Point ??
-                                                     ((room.get_BoundingBox(null).Min + room.get_BoundingBox(null).Max) * 0.5);
-                                        XYZ perpDir = wallDir.CrossProduct(XYZ.BasisZ).Normalize();
-                                        if (perpDir.DotProduct((roomPt - doorProj).Normalize()) > 0)
-                                            perpDir = -perpDir;
-
-                                        // глубина завода как проекция «центр двери − проекция» на перпендикуляр
-                                        double inset = (origin - doorProj).DotProduct(perpDir);
-                                        if (inset < 0) inset = 0; // на всякий
-
-                                        p3 = p2 + perpDir * inset;
-                                        p4 = p1 + perpDir * inset;
-                                    }
-                                    else // ── дуговой сегмент ──
-                                    {
-                                        var arcSeg = (Arc)segCrv;
-
-                                        // проекция центра двери на дугу
-                                        var pr = arcSeg.Project(origin);
-                                        XYZ doorProj = pr.XYZPoint;
-                                        double tProj = pr.Parameter;
-
-                                        // смещение вдоль дуги по половине ширины (радианы)
-                                        double R = arcSeg.Radius;
-                                        double delta = (R > 1e-9) ? (halfW / R) : 0.0;
-                                        double t1 = tProj - delta;
-                                        double t2 = tProj + delta;
-
-                                        p1 = arcSeg.Evaluate(t1, false); // обе точки лежат на дуге
-                                        p2 = arcSeg.Evaluate(t2, false);
-
-                                        // касательная вдоль дуги (для построения p1/p2 уже не нужна дальше)
-                                        // XYZ wallDir = (p2 - p1).Normalize();
-
-                                        // радиальная нормаль внутрь помещения
-                                        XYZ roomPt = (room.Location as LocationPoint)?.Point ??
-                                                     ((room.get_BoundingBox(null).Min + room.get_BoundingBox(null).Max) * 0.5);
-                                        XYZ radial = (doorProj - arcSeg.Center).Normalize();
-                                        if (radial.DotProduct((roomPt - doorProj).Normalize()) > 0)
-                                            radial = -radial;
-
-                                        // глубина завода как проекция «центр двери − проекция» на радиальную нормаль
-                                        double inset = (origin - doorProj).DotProduct(radial);
-                                        if (inset < 0) inset = 0;
-
-                                        p3 = p2 + radial * inset;
-                                        p4 = p1 + radial * inset;
-                                    }
-
-                                    var patch = (p1, p2, p3, p4);
-                                    if (!IsDoorPatchLargeEnough(patch, curveCreationTolerance))
-                                        continue;
-
-                                    doorPatches.Add(patch);
+                                    errorRooms.Add(room);
+                                    continue;
                                 }
-
-                                // ---------------- 2) Врезка в boundary (Line + Arc) ----------------
-                                var xyzEq = new XYZEquality(shortCurveTolerance);
-
-                                foreach (var patch in doorPatches)
-                                {
-                                    for (int i = 0; i < mainEdgs.Count; i++)
-                                    {
-                                        Curve crv = mainEdgs[i];
-
-                                        // ----- LINE ---------------------------------------------------
-                                        if (crv is Line ln &&
-                                            IsPointOnLineSegment(ln.GetEndPoint(0), ln.GetEndPoint(1), patch.p1, shortCurveTolerance) &&
-                                            IsPointOnLineSegment(ln.GetEndPoint(0), ln.GetEndPoint(1), patch.p2, shortCurveTolerance))
-                                        {
-                                            if (TryBuildPatchedLineSegments(ln, patch, xyzEq, curveCreationTolerance, out List<Curve> newEdges))
-                                            {
-                                                mainEdgs.RemoveAt(i);
-                                                mainEdgs.InsertRange(i, newEdges);
-                                            }
-                                            break;
-                                        }
-
-                                        // ----- ARC ----------------------------------------------------
-                                        if (crv is Arc arc &&
-                                            arc.Project(patch.p1).Distance < shortCurveTolerance &&
-                                            arc.Project(patch.p2).Distance < shortCurveTolerance)
-                                        {
-                                            if (TryBuildPatchedArcSegments(arc, patch, xyzEq, curveCreationTolerance, out List<Curve> newEdges))
-                                            {
-                                                mainEdgs.RemoveAt(i);
-                                                mainEdgs.InsertRange(i, newEdges);
-                                            }
-                                            break;
-                                        }
-                                    }
-                                }
-
-                                // ---------------- 3) Обновляем CurveArray --------------------------
-                                firstRoomCurves.Clear();
-                                foreach (var c in mainEdgs) firstRoomCurves.Append(c);
                             }
 
                             CurveArray secondRoomCurves = new CurveArray();
@@ -530,6 +380,15 @@ namespace FloorCreator
                                     errorRooms.Add(room);
                                     continue;
                                 }
+                                if (needFillDoorPatches)
+                                {
+                                    firstRoomCurves = ApplyDoorPatchesToRoomCurves(doc, room, loops, firstRoomCurves, shortCurveTolerance, curveCreationTolerance);
+                                    if (firstRoomCurves.Size < 3)
+                                    {
+                                        errorRooms.Add(room);
+                                        continue;
+                                    }
+                                }
                                 CurveArray secondRoomCurves = new CurveArray();
                                 for (int i = 0; i < loops.Count(); i++)
                                 {
@@ -745,6 +604,15 @@ namespace FloorCreator
                                 {
                                     errorRooms.Add(room);
                                     continue;
+                                }
+                                if (needFillDoorPatches)
+                                {
+                                    firstRoomCurves = ApplyDoorPatchesToRoomCurves(doc, room, loops, firstRoomCurves, shortCurveTolerance, curveCreationTolerance);
+                                    if (firstRoomCurves.Size < 3)
+                                    {
+                                        errorRooms.Add(room);
+                                        continue;
+                                    }
                                 }
                                 CurveArray secondRoomCurves = new CurveArray();
 
@@ -964,6 +832,173 @@ namespace FloorCreator
             floorCreatorProgressBarWPF = new FloorCreatorProgressBarWPF();
             floorCreatorProgressBarWPF.Show();
             System.Windows.Threading.Dispatcher.Run();
+        }
+        private CurveArray ApplyDoorPatchesToRoomCurves(
+            Document doc,
+            Room room,
+            IList<IList<BoundarySegment>> loops,
+            CurveArray roomCurves,
+            double shortCurveTolerance,
+            double curveCreationTolerance)
+        {
+            if (doc == null || room == null || loops == null || roomCurves == null || roomCurves.Size < 3)
+                return roomCurves;
+
+            List<Curve> mainEdges = roomCurves.Cast<Curve>().ToList();
+            if (mainEdges.Count < 3)
+                return roomCurves;
+
+            var doorPatches = new List<(XYZ p1, XYZ p2, XYZ p3, XYZ p4)>();
+
+            var doorCollector = new FilteredElementCollector(doc)
+                .OfCategory(BuiltInCategory.OST_Doors)
+                .OfClass(typeof(FamilyInstance))
+                .Cast<FamilyInstance>()
+                .Where(d =>
+                    (d.FromRoom != null && d.FromRoom.Id == room.Id) ||
+                    (d.ToRoom != null && d.ToRoom.Id == room.Id))
+                .ToList();
+
+            foreach (var door in doorCollector)
+            {
+                var hostWall = door.Host as Wall;
+                if (hostWall == null) continue;
+
+                double width = door.Symbol?.get_Parameter(BuiltInParameter.GENERIC_WIDTH)?.AsDouble() ?? 0;
+                if (width == 0)
+                    width = door.get_Parameter(BuiltInParameter.GENERIC_WIDTH)?.AsDouble() ?? 0;
+                if (width <= 0) continue;
+
+                double halfWidth = width / 2.0;
+                if (!(door.Location is LocationPoint locationPoint)) continue;
+
+                XYZ origin = locationPoint.Point;
+                BoundarySegment bestSeg = null;
+                double minDist = double.MaxValue;
+                foreach (var loop in loops)
+                {
+                    foreach (var seg in loop)
+                    {
+                        double distance = seg.GetCurve().Distance(origin);
+                        if (distance < minDist)
+                        {
+                            minDist = distance;
+                            bestSeg = seg;
+                        }
+                    }
+                }
+
+                if (bestSeg == null || minDist > 2.0) continue;
+
+                Curve segCurve = bestSeg.GetCurve();
+                XYZ p1;
+                XYZ p2;
+                XYZ p3;
+                XYZ p4;
+
+                if (segCurve is Line lineSegment)
+                {
+                    XYZ a = lineSegment.GetEndPoint(0);
+                    XYZ b = lineSegment.GetEndPoint(1);
+                    XYZ wallDir = (b - a).Normalize();
+                    XYZ doorProj = ProjectPointOnLine(a, b, origin);
+
+                    p1 = doorProj - wallDir * halfWidth;
+                    p2 = doorProj + wallDir * halfWidth;
+
+                    XYZ roomPt = (room.Location as LocationPoint)?.Point ??
+                                 ((room.get_BoundingBox(null).Min + room.get_BoundingBox(null).Max) * 0.5);
+                    XYZ perpDir = wallDir.CrossProduct(XYZ.BasisZ).Normalize();
+                    if (perpDir.DotProduct((roomPt - doorProj).Normalize()) > 0)
+                        perpDir = -perpDir;
+
+                    double inset = (origin - doorProj).DotProduct(perpDir);
+                    if (inset < 0) inset = 0;
+
+                    p3 = p2 + perpDir * inset;
+                    p4 = p1 + perpDir * inset;
+                }
+                else if (segCurve is Arc arcSegment)
+                {
+                    IntersectionResult projection = arcSegment.Project(origin);
+                    if (projection == null) continue;
+
+                    XYZ doorProj = projection.XYZPoint;
+                    double tProj = projection.Parameter;
+                    double radius = arcSegment.Radius;
+                    double delta = radius > 1e-9 ? halfWidth / radius : 0.0;
+
+                    p1 = arcSegment.Evaluate(tProj - delta, false);
+                    p2 = arcSegment.Evaluate(tProj + delta, false);
+
+                    XYZ roomPt = (room.Location as LocationPoint)?.Point ??
+                                 ((room.get_BoundingBox(null).Min + room.get_BoundingBox(null).Max) * 0.5);
+                    XYZ radial = (doorProj - arcSegment.Center).Normalize();
+                    if (radial.DotProduct((roomPt - doorProj).Normalize()) > 0)
+                        radial = -radial;
+
+                    double inset = (origin - doorProj).DotProduct(radial);
+                    if (inset < 0) inset = 0;
+
+                    p3 = p2 + radial * inset;
+                    p4 = p1 + radial * inset;
+                }
+                else
+                {
+                    continue;
+                }
+
+                var patch = (p1, p2, p3, p4);
+                if (!IsDoorPatchLargeEnough(patch, curveCreationTolerance))
+                    continue;
+
+                doorPatches.Add(patch);
+            }
+
+            if (doorPatches.Count == 0)
+                return roomCurves;
+
+            var xyzEq = new XYZEquality(shortCurveTolerance);
+
+            foreach (var patch in doorPatches)
+            {
+                for (int i = 0; i < mainEdges.Count; i++)
+                {
+                    Curve curve = mainEdges[i];
+
+                    if (curve is Line line &&
+                        IsPointOnLineSegment(line.GetEndPoint(0), line.GetEndPoint(1), patch.p1, shortCurveTolerance) &&
+                        IsPointOnLineSegment(line.GetEndPoint(0), line.GetEndPoint(1), patch.p2, shortCurveTolerance))
+                    {
+                        if (TryBuildPatchedLineSegments(line, patch, xyzEq, curveCreationTolerance, out List<Curve> newEdges))
+                        {
+                            mainEdges.RemoveAt(i);
+                            mainEdges.InsertRange(i, newEdges);
+                        }
+                        break;
+                    }
+
+                    if (curve is Arc arc &&
+                        arc.Project(patch.p1).Distance < shortCurveTolerance &&
+                        arc.Project(patch.p2).Distance < shortCurveTolerance)
+                    {
+                        if (TryBuildPatchedArcSegments(arc, patch, xyzEq, curveCreationTolerance, out List<Curve> newEdges))
+                        {
+                            mainEdges.RemoveAt(i);
+                            mainEdges.InsertRange(i, newEdges);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            CurveArray patchedCurves = new CurveArray();
+            foreach (Curve curve in mainEdges)
+            {
+                patchedCurves.Append(curve);
+            }
+
+            return patchedCurves;
         }
         private CurveArray GetFilteredRoomCurves(IList<IList<BoundarySegment>> loops, double minLength, double createTolerance)
         {
