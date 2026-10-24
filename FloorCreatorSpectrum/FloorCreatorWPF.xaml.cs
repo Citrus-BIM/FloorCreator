@@ -102,6 +102,12 @@ namespace FloorCreator
                 chk_FilterDoorsByPhase.IsChecked = FloorCreatorSettingsItem.FilterDoorsByPhase;
             }
 
+            // Restore by name: element ids belong to a particular project.
+            var savedPhaseFilter = _phaseFilterItems.FirstOrDefault(
+                pf => pf.Name == FloorCreatorSettingsItem?.DoorPhaseFilterName);
+            if (savedPhaseFilter != null)
+                comboBox_DoorPhaseFilter.SelectedItem = savedPhaseFilter;
+
             // Обновляем доступность контролов после выставления радио
             groupBox_FloorCreationOption_Checked(null, null);
             UpdateDoorPhaseSelectorState();
@@ -205,6 +211,9 @@ namespace FloorCreator
             }
 
             FloorCreatorSettingsItem.FilterDoorsByPhase = FilterDoorsByPhase;
+            // Keep the selection even while phase filtering is disabled.
+            FloorCreatorSettingsItem.DoorPhaseFilterName =
+                (comboBox_DoorPhaseFilter.SelectedItem as PhaseFilterSelectionItem)?.Name;
 
             FloorCreatorSettingsItem.SaveSettings();
         }

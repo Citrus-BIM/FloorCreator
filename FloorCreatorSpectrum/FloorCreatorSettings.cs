@@ -12,6 +12,7 @@ namespace FloorCreator
         public string FloorLevelOffset { get; set; }
         public bool FillDoorPatches { get; set; }
         public bool FilterDoorsByPhase { get; set; }
+        public string DoorPhaseFilterName { get; set; }
 
         private const string FileName = "FloorCreatorSettings.xml";
 
